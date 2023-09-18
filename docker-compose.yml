@@ -1,0 +1,41 @@
+version: '3.9'
+
+services:
+
+  back:
+    container_name: back
+    image: back
+    restart: always
+    ports:
+      - 5000:5000
+      - 5050:5050
+
+  nginx:
+    container_name: nginx
+    image: nginx
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /home/elice/thief/front-end/build:/home/elice/build
+      - /home/elice/thief/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - /home/elice/thief/nginx/dhparam:/etc/nginx/dhparam
+      - /home/elice/thief/nginx/conf.d:/etc/nginx/conf.d
+      - /home/elice/thief/ssl/letsencrypt:/etc/letsencrypt
+      - /home/elice/thief/ssl/www:/var/www/certbot
+    command: '/bin/sh -c ''while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g "daemon off;"'''
+    depends_on:
+      - back
+
+  certbot:
+    depends_on:
+      - nginx
+    container_name: certbot
+    image: certbot/certbot
+    restart: always
+    volumes:
+      - /home/elice/thief/ssl/letsencrypt:/etc/letsencrypt
+      - /home/elice/thief/ssl/www:/var/www/certbot
+      - /home/elice/thief/ssl/log:/var/log/letsencrypt
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
